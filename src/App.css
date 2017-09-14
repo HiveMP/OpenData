@@ -3,5 +3,7 @@
 }
 .starter-template {
   padding: 3rem 1.5rem;
+}
+.starter-template > h1, .starter-template > p {
   text-align: center;
 }

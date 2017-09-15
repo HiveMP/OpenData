@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { AppState } from '../state/AppState';
 import * as moment from 'moment';
+import { Link } from 'react-router-dom';
 
 interface Props {
   appState: AppState;
@@ -91,7 +92,7 @@ export default class SteamCurators extends React.Component<Props, State> {
       lastReviewDate,
       ROW_NUMBER() OVER(PARTITION BY id ORDER BY date) AS firstCreated
     FROM \`hivemp.public.SteamCurators_v2\`
-    WHERE _PARTITIONTIME = CAST(CURRENT_DATE() AS TIMESTAMP)
+    WHERE _PARTITIONTIME = CAST(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY) AS TIMESTAMP)
   )
   WHERE firstCreated = 1
   ORDER BY followers DESC
@@ -126,7 +127,7 @@ FROM (
     lastReviewDate,
     ROW_NUMBER() OVER(PARTITION BY id ORDER BY date) AS firstCreated
   FROM \`hivemp.public.SteamCurators_v2\`
-  WHERE _PARTITIONTIME = CAST(CURRENT_DATE() AS TIMESTAMP)
+  WHERE _PARTITIONTIME = CAST(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY) AS TIMESTAMP)
     AND name LIKE @input
 )
 WHERE firstCreated = 1
@@ -245,14 +246,18 @@ LIMIT 250`,
           let backgroundColor = ['hsl(', hue, ',100%,90%)'].join('');
           rows.push(
             <tr>
-              <th scope="row" className="d-none d-md-table-cell">{searchData[i].id}</th>
-              <td>{searchData[i].name}</td>
-              <td>{searchData[i].followers}</td>
-              <td>{searchData[i].totalReviews}</td>
-              <td className="d-none d-lg-table-cell" style={{backgroundColor: backgroundColor}}>
+              <td className="align-middle">
+                <Link to={'/steam/curators/' + searchData[i].id} className="btn btn-primary btn-sm">
+                  <i className="fa fa-bar-chart" />
+                </Link>
+              </td>
+              <td className="align-middle">{searchData[i].name}</td>
+              <td className="align-middle">{searchData[i].followers}</td>
+              <td className="align-middle">{searchData[i].totalReviews}</td>
+              <td className="d-none d-lg-table-cell align-middle" style={{backgroundColor: backgroundColor}}>
                 {Math.round(searchData[i].percentFavourable * 10000) / 100}%
               </td>
-              <td className="text-nowrap d-none d-lg-table-cell">{
+              <td className="text-nowrap d-none d-lg-table-cell align-middle">{
                 searchData[i].lastReviewDate == null
                 ? '-' 
                 : (moment(searchData[i].lastReviewDate as number)
@@ -279,7 +284,7 @@ LIMIT 250`,
             <table key="data" className="table">
               <thead>
                 <tr>
-                  <th className="d-none d-md-table-cell">ID</th>
+                  <th />
                   <th>Name</th>
                   <th className="text-nowrap">Followers</th>
                   <th className="text-nowrap">Total Reviews</th>

@@ -18,6 +18,13 @@ export default class Reddit extends React.Component<Props, {}> {
         <p className="lead">
           Find mentions of Steam games on Reddit in real time.
         </p>
+        <div className="alert alert-info" role="alert">
+          This functionality is coming soon. In the meantime, you can query this data in&nbsp;
+          <a href="https://bigquery.cloud.google.com/dataset/hivemp:public" target="_blank" className="alert-link">
+            Google BigQuery
+          </a>
+          &nbsp;directly.
+        </div>
       </div>
     );
   }

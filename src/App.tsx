@@ -12,6 +12,7 @@ import LoginButton from './components/LoginButton';
 import Reddit from './routes/Reddit';
 import SteamCurators from './routes/SteamCurators';
 import * as ls from 'local-storage';
+import SteamCuratorView from './routes/SteamCuratorView';
 
 // const logo = require('./logo.svg');
 
@@ -70,6 +71,16 @@ class App extends React.Component<{}, AppState> {
             path="/steam/curators"
             render={() => {
               return <SteamCurators appState={this.state} />;
+            }}
+          />
+        ),
+        (
+          <Route
+            key="curator_view"
+            exact={true}
+            path="/steam/curators/:id"
+            render={(info: any) => {
+              return <SteamCuratorView appState={this.state} id={info.match.params.id} />;
             }}
           />
         ),

@@ -1,3 +1,4 @@
+import { QueryExecutor } from '../QueryExecutor';
 import * as React from 'react';
 import { AppState } from '../state/AppState';
 import * as moment from 'moment';
@@ -20,8 +21,8 @@ interface SearchResult {
   id: string;
   name: string;
   followers: number;
-  totalReviews: number;
-  percentFavourable: number;
+  negativeReviews: number;
+  positiveReviews: number;
   lastReviewDate: number | null;
 }
 
@@ -70,7 +71,8 @@ export default class SteamCurators extends React.Component<Props, State> {
   }
   
     async searchTopCuratorsInternal(): Promise<void> {
-      this.setState({ topSearchResults: await this.runSearchQuery(
+      let executor = new QueryExecutor(this.props.appState);
+      this.setState({ topSearchResults: await executor.runQuery(
         `
   SELECT
     id,
@@ -81,7 +83,7 @@ export default class SteamCurators extends React.Component<Props, State> {
     CASE lastReviewDate
       WHEN NULL THEN NULL
       ELSE UNIX_MILLIS(lastReviewDate)
-    END AS lastReviewDateUnixMillis
+    END AS lastReviewDate
   FROM (
     SELECT
       id,
@@ -105,7 +107,8 @@ export default class SteamCurators extends React.Component<Props, State> {
       throw 'Your search query must be at least 3 characters long.';
     }
 
-    this.setState({ searchResults: await this.runSearchQuery(
+    let executor = new QueryExecutor(this.props.appState);
+    this.setState({ searchResults: await executor.runQuery(
       `
 SELECT
   id,
@@ -116,7 +119,7 @@ SELECT
   CASE lastReviewDate
     WHEN NULL THEN NULL
     ELSE UNIX_MILLIS(lastReviewDate)
-  END AS lastReviewDateUnixMillis
+  END AS lastReviewDate
 FROM (
   SELECT
     id,
@@ -144,63 +147,6 @@ LIMIT 250`,
           }
         }
       ]) });
-  }
-
-  async runSearchQuery(query: string, queryParameters: any): Promise<SearchResult[]> {
-    let gapi = await require('google-client-api')();
-    await gapi.client.init({
-      'apiKey': 'AIzaSyDZbMZWkWTmhToK1xtc5X7SwUufr-eSx0k',
-      'discoveryDocs': ['https://www.googleapis.com/discovery/v1/apis/bigquery/v2/rest'],
-    });
-    if (this.props.appState.response === undefined ||
-        this.props.appState.response.tokenObj === undefined) {
-      return [];
-    }
-    let tokenObj = this.props.appState.response.tokenObj as any;
-    gapi.auth.setToken({
-      access_token: tokenObj.access_token
-    });
-
-    let projectResult = await gapi.client.bigquery.projects.list(
-      {
-        maxResults: 1,
-      });
-    let projectId = projectResult.result.projects[0].id;
-
-    let queryResult = await gapi.client.bigquery.jobs.query(
-      {
-        projectId: projectId,
-        resource: {
-          query: query,
-          useLegacySql: false,
-          queryParameters: queryParameters
-        },
-      });
-
-    let searchResults: SearchResult[] = [];
-    for (let i = 0; i < queryResult.result.totalRows; i++) {
-      let id = queryResult.result.rows[i].f[0].v as string;
-      let name = queryResult.result.rows[i].f[1].v as string;
-      let followers = parseInt(queryResult.result.rows[i].f[2].v as string, 10);
-      let negativeReviews = parseInt(queryResult.result.rows[i].f[3].v as string, 10);
-      let positiveReviews = parseInt(queryResult.result.rows[i].f[4].v as string, 10);
-      let lastReviewDate = 
-        queryResult.result.rows[i].f[5].v == null ? null : parseInt(queryResult.result.rows[i].f[5].v as string, 10);
-      let totalReviews = negativeReviews + positiveReviews;
-      let percentFavourable = 1;
-      if (totalReviews > 0) {
-        percentFavourable = positiveReviews / totalReviews;
-      }
-      searchResults.push({
-        id: id,
-        name: name,
-        followers: followers,
-        totalReviews: totalReviews,
-        percentFavourable: percentFavourable,
-        lastReviewDate: lastReviewDate,
-      });
-    }
-    return searchResults;
   }
 
   render() {
@@ -241,9 +187,23 @@ LIMIT 250`,
       } else {
         let rows: JSX.Element[] = [];
         for (let i = 0; i < searchData.length; i++) {
-          let value = searchData[i].percentFavourable;
-          let hue = (value * 120).toString(10);
-          let backgroundColor = ['hsl(', hue, ',100%,90%)'].join('');
+          let totalReviews = searchData[i].negativeReviews + searchData[i].positiveReviews;
+          let percentFavourable = 1;
+          if (totalReviews > 0) {
+            percentFavourable = searchData[i].positiveReviews / totalReviews;
+          }
+          let favourHue = (percentFavourable * 120).toString(10);
+          let favourColor = ['hsl(', favourHue, ',100%,90%)'].join('');
+          let reviewColor = 'white';
+          if (searchData[i].lastReviewDate != null) {
+            let lastReviewUtc = moment(searchData[i].lastReviewDate as number).unix();
+            let currentTimeUtc = moment().unix();
+            let monthSeconds = 60 * 60 * 24 * 30;
+            let age = Math.max(0, Math.min(currentTimeUtc - lastReviewUtc, monthSeconds));
+            let reviewHue = ((1 - (age / monthSeconds)) * 120).toString(10);
+            reviewColor = ['hsl(', reviewHue, ',100%,90%)'].join('');
+          }
+          
           rows.push(
             <tr>
               <td className="align-middle">
@@ -253,11 +213,11 @@ LIMIT 250`,
               </td>
               <td className="align-middle">{searchData[i].name}</td>
               <td className="align-middle">{searchData[i].followers}</td>
-              <td className="align-middle">{searchData[i].totalReviews}</td>
-              <td className="d-none d-lg-table-cell align-middle" style={{backgroundColor: backgroundColor}}>
-                {Math.round(searchData[i].percentFavourable * 10000) / 100}%
+              <td className="align-middle">{searchData[i].negativeReviews + searchData[i].positiveReviews}</td>
+              <td className="d-none d-lg-table-cell align-middle" style={{backgroundColor: favourColor}}>
+                {Math.round(percentFavourable * 10000) / 100}%
               </td>
-              <td className="text-nowrap d-none d-lg-table-cell align-middle">{
+              <td className="text-nowrap d-none d-lg-table-cell align-middle" style={{backgroundColor: reviewColor}}>{
                 searchData[i].lastReviewDate == null
                 ? '-' 
                 : (moment(searchData[i].lastReviewDate as number)

@@ -18,7 +18,7 @@ export class NavLink extends React.Component<NavLinkProps, {}> {
         to={this.props.to}
         activeClassName="active"
         tag={RRNavLink}
-        exact={true}
+        exact={this.props.to === '/'}
       >
         {this.props.children}
       </InternalNav>

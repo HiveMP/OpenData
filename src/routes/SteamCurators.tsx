@@ -241,7 +241,7 @@ LIMIT 250`,
             </p>
           ),
           (
-            <table key="data" className="table">
+            <table key="data" className="table table-responsive">
               <thead>
                 <tr>
                   <th />

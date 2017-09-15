@@ -136,6 +136,16 @@ class App extends React.Component<{}, AppState> {
           />
           {authedRoutes}
         </div>
+        <footer className="footer">
+          <span className="text-muted pl-4 pr-4">
+            <strong>Powered by <a href="https://hivemp.com/" target="_blank">HiveMP</a>.</strong>&nbsp;
+            This website is <a href="https://github.com/HiveMP/OpenData">open source</a>.&nbsp;
+            <span className="d-none d-md-inline">
+              You can query this data directly through&nbsp;
+              <a href="https://bigquery.cloud.google.com/dataset/hivemp:public" target="_blank">Google BigQuery</a>.
+            </span>
+          </span>
+        </footer>
       </div>
     );
   }
